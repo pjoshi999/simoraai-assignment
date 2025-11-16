@@ -11,6 +11,7 @@ import {
   VIDEO_WIDTH,
 } from "../../types/constants";
 import { VideoWithCaptions } from "../remotion/VideoWithCaptions/VideoWithCaptions";
+import { api } from "../lib/api";
 
 export default function CaptioningPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -36,12 +37,9 @@ export default function CaptioningPage() {
       setVideoFile(file);
       setCaptions([]);
       setUploadedVideoPath(""); // Reset uploaded path
+      setVideoUrl(""); // Reset video URL
 
-      // create object url for preview
-      const url = URL.createObjectURL(file);
-      setVideoUrl(url);
-
-      // auto-upload the file
+      // auto-upload the file to backend
       uploadFile(file);
     }
   };
@@ -51,21 +49,14 @@ export default function CaptioningPage() {
     setIsUploading(true);
 
     try {
-      const formData = new FormData();
-      formData.append("video", file);
-
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Upload failed");
-      }
-
+      // Upload to Node.js backend
+      const data = await api.uploadVideo(file);
+      
       setUploadedVideoPath(data.videoUrl);
+
+      // Update preview with backend video URL
+      const backendVideoUrl = api.getVideoUrl(data.videoUrl);
+      setVideoUrl(backendVideoUrl);
 
       toast.success(
         "Video uploaded successfully! You can now generate captions.",
@@ -87,19 +78,8 @@ export default function CaptioningPage() {
     setIsGenerating(true);
 
     try {
-      const response = await fetch("/api/captions/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ videoPath: uploadedVideoPath }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Caption generation failed");
-      }
+      // Generate captions from Node.js backend
+      const data = await api.generateCaptions(uploadedVideoPath);
 
       setCaptions(data.captions);
       setVideoDuration(data.duration);
