@@ -1,4 +1,11 @@
 {
-    "buildCommand": "node deploy.mjs && next build"
+  "buildCommand": "next build",
+  "functions": {
+    "src/app/api/captions/generate/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/render/local/route.ts": {
+      "maxDuration": 300
+    }
   }
-  
+}
