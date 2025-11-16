@@ -2,8 +2,8 @@ import "../../styles/global.css";
 import { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
-  title: "Remotion and Next.js",
-  description: "Remotion and Next.js",
+  title: "Simora AI Captioning Platform",
+  description: "Made by Priyanshu Joshi",
 };
 
 export const viewport: Viewport = {
