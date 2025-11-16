@@ -79,13 +79,13 @@ export default function CaptioningPage() {
   };
 
   // Legacy upload handler (kept for compatibility)
-  const handleUpload = async () => {
-    if (!videoFile) {
-      setError("Please select a video file first");
-      return;
-    }
-    await uploadFile(videoFile);
-  };
+  // const handleUpload = async () => {
+  //   if (!videoFile) {
+  //     setError("Please select a video file first");
+  //     return;
+  //   }
+  //   await uploadFile(videoFile);
+  // };
 
   // Handle auto-caption generation
   const handleGenerateCaptions = async () => {
