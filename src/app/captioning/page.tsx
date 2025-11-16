@@ -1,8 +1,12 @@
 "use client";
 
 import React, { useState, useMemo, useRef, useCallback } from "react";
+import { Toaster, toast } from "sonner";
 import { Player } from "@remotion/player";
-import type { CaptionSegmentType, CaptionStyleType } from "../../../types/caption";
+import type {
+  CaptionSegmentType,
+  CaptionStyleType,
+} from "../../../types/caption";
 import {
   VIDEO_CAPTION_COMP_NAME,
   VIDEO_FPS,
@@ -13,46 +17,41 @@ import { VideoWithCaptions } from "../../remotion/VideoWithCaptions/VideoWithCap
 
 export default function CaptioningPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [videoUrl, setVideoUrl] = useState<string>(""); // Blob URL for preview
-  const [uploadedVideoPath, setUploadedVideoPath] = useState<string>(""); // Server path for API
+  const [videoUrl, setVideoUrl] = useState<string>("");
+  const [uploadedVideoPath, setUploadedVideoPath] = useState<string>("");
   const [captions, setCaptions] = useState<CaptionSegmentType[]>([]);
-  const [captionStyle, setCaptionStyle] = useState<CaptionStyleType>("bottom-centered");
+  const [captionStyle, setCaptionStyle] =
+    useState<CaptionStyleType>("bottom-centered");
   const [isUploading, setIsUploading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState<string>("");
-  const [successMessage, setSuccessMessage] = useState<string>("");
   const [videoDuration, setVideoDuration] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Handle video file selection
+  // handle video file selection
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.includes("video")) {
-        setError("Please select a valid video file");
+        toast.error("Please select a valid video file");
         return;
       }
       setVideoFile(file);
-      setError("");
-      setSuccessMessage("");
       setCaptions([]);
       setUploadedVideoPath(""); // Reset uploaded path
-      
-      // Create object URL for preview
+
+      // create object url for preview
       const url = URL.createObjectURL(file);
       setVideoUrl(url);
-      
-      // Auto-upload the file
+
+      // auto-upload the file
       uploadFile(file);
     }
   };
 
-  // Handle video upload
+  // handle video upload
   const uploadFile = async (file: File) => {
     setIsUploading(true);
-    setError("");
-    setSuccessMessage("");
 
     try {
       const formData = new FormData();
@@ -69,42 +68,34 @@ export default function CaptioningPage() {
         throw new Error(data.error || "Upload failed");
       }
 
-      setUploadedVideoPath(data.videoUrl); // Store server path
-      setSuccessMessage("Video uploaded successfully! You can now generate captions.");
+      setUploadedVideoPath(data.videoUrl);
+      
+      toast.success(
+        "Video uploaded successfully! You can now generate captions.",
+      );
     } catch (err: any) {
-      setError(err.message || "Failed to upload video");
+      toast.error(err.message || "Failed to upload video");
     } finally {
       setIsUploading(false);
     }
   };
 
-  // Legacy upload handler (kept for compatibility)
-  // const handleUpload = async () => {
-  //   if (!videoFile) {
-  //     setError("Please select a video file first");
-  //     return;
-  //   }
-  //   await uploadFile(videoFile);
-  // };
-
-  // Handle auto-caption generation
+  // handle auto-caption generation
   const handleGenerateCaptions = async () => {
     if (!uploadedVideoPath) {
-      setError("Please wait for video upload to complete first");
+      toast.error("Please wait for video upload to complete first");
       return;
     }
 
     setIsGenerating(true);
-    setError("");
-    setSuccessMessage("");
-
+    
     try {
       const response = await fetch("/api/captions/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ videoPath: uploadedVideoPath }), // Use server path
+        body: JSON.stringify({ videoPath: uploadedVideoPath }),
       });
 
       const data = await response.json();
@@ -115,25 +106,23 @@ export default function CaptioningPage() {
 
       setCaptions(data.captions);
       setVideoDuration(data.duration);
-      setSuccessMessage(
-        `Captions generated successfully! (${data.captions.length} segments, Language: ${data.language || "auto-detected"})`
+      toast.success(
+        `Captions generated successfully! (${data.captions.length} segments, Language: ${data.language || "auto-detected"})`,
       );
     } catch (err: any) {
-      setError(err.message || "Failed to generate captions");
+      toast.error(err.message || "Failed to generate captions");
     } finally {
       setIsGenerating(false);
     }
   };
 
-  // Calculate duration in frames
   const durationInFrames = useMemo(() => {
     if (videoDuration > 0) {
       return Math.ceil(videoDuration * VIDEO_FPS);
     }
-    return 300; // Default 10 seconds
+    return 300; // default 10 seconds
   }, [videoDuration]);
 
-  // Prepare input props for Remotion
   const inputProps = useMemo(() => {
     return {
       videoUrl: videoUrl || "",
@@ -142,7 +131,6 @@ export default function CaptioningPage() {
     };
   }, [videoUrl, captions, captionStyle]);
 
-  // Handle video metadata loaded
   const handleVideoLoaded = useCallback(() => {
     if (videoRef.current) {
       setVideoDuration(videoRef.current.duration);
@@ -150,32 +138,34 @@ export default function CaptioningPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white">
+    <div className="min-h-screen bg-black text-white">
+      <Toaster position="bottom-right" richColors />
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
+        {/* header */}
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-5xl font-bold mb-4 py-3 bg-white bg-clip-text text-transparent">
             Remotion Captioning Platform
           </h1>
           <p className="text-gray-400 text-lg">
-            Upload videos, auto-generate captions with Hinglish support, and render with stunning styles
+            Upload videos, auto-generate captions with Hinglish support, and
+            render with stunning styles
           </p>
         </div>
 
-        {/* Main Content Grid */}
+        {/* main content grid */}
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Left Column - Upload & Controls */}
+          {/* left column - upload & controls */}
           <div className="space-y-6">
-            {/* Upload Section */}
-            <div className="bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-700">
+            {/* upload section */}
+            <div className="bg-[#171717] rounded-2xl p-6 shadow-xl border border-[#1f1f1f]">
               <h2 className="text-2xl font-semibold mb-4 flex items-center">
-                <span className="mr-2">📹</span> Upload Video
+                Upload Video
               </h2>
-              
+
               <div className="space-y-4">
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center cursor-pointer hover:border-blue-500 transition-colors"
+                  className="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center cursor-pointer hover:border-white transition-colors"
                 >
                   <input
                     ref={fileInputRef}
@@ -186,7 +176,9 @@ export default function CaptioningPage() {
                   />
                   <div className="text-4xl mb-2">🎬</div>
                   <p className="text-gray-400">
-                    {videoFile ? videoFile.name : "Click to select video file (.mp4)"}
+                    {videoFile
+                      ? videoFile.name
+                      : "Click to select video file (.mp4)"}
                   </p>
                   {isUploading && (
                     <p className="text-blue-400 mt-2 text-sm">Uploading...</p>
@@ -198,21 +190,24 @@ export default function CaptioningPage() {
               </div>
             </div>
 
-            {/* Caption Generation */}
+            {/* caption generation */}
             {videoUrl && (
-              <div className="bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-700">
+              <div className="bg-[#171717] rounded-2xl p-6 shadow-xl border border-[#1f1f1f]">
                 <h2 className="text-2xl font-semibold mb-4 flex items-center">
-                  <span className="mr-2">💬</span> Generate Captions
+                  Generate Captions
                 </h2>
-                
+
                 <button
                   onClick={handleGenerateCaptions}
                   disabled={isGenerating || isUploading || !uploadedVideoPath}
-                  className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+                  className="w-full bg-white disabled:bg-white text-black font-semibold py-3 px-6 rounded-xl transition-colors"
                 >
                   {isUploading ? (
                     <span className="flex items-center justify-center">
-                      <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                      <svg
+                        className="animate-spin h-5 w-5 mr-2"
+                        viewBox="0 0 24 24"
+                      >
                         <circle
                           className="opacity-25"
                           cx="12"
@@ -232,7 +227,10 @@ export default function CaptioningPage() {
                     </span>
                   ) : isGenerating ? (
                     <span className="flex items-center justify-center">
-                      <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                      <svg
+                        className="animate-spin h-5 w-5 mr-2"
+                        viewBox="0 0 24 24"
+                      >
                         <circle
                           className="opacity-25"
                           cx="12"
@@ -248,7 +246,7 @@ export default function CaptioningPage() {
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         />
                       </svg>
-                      Generating Captions...
+                      Generating Captions..
                     </span>
                   ) : (
                     "Auto-generate Captions (AssemblyAI)"
@@ -261,25 +259,37 @@ export default function CaptioningPage() {
               </div>
             )}
 
-            {/* Caption Style Selection */}
+            {/* caption style selection */}
             {captions.length > 0 && (
-              <div className="bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-700">
+              <div className="bg-[#171717] rounded-2xl p-6 shadow-xl border border-[#1f1f1f]">
                 <h2 className="text-2xl font-semibold mb-4 flex items-center">
-                  <span className="mr-2">🎨</span> Caption Style
+                  Caption Style
                 </h2>
-                
+
                 <div className="space-y-3">
                   {[
-                    { value: "bottom-centered", label: "Bottom Centered", desc: "Classic subtitle style" },
-                    { value: "top-bar", label: "Top Bar", desc: "News-style banner" },
-                    { value: "karaoke", label: "Karaoke", desc: "Word-by-word highlighting" },
+                    {
+                      value: "bottom-centered",
+                      label: "Bottom Centered",
+                      desc: "Classic subtitle style",
+                    },
+                    {
+                      value: "top-bar",
+                      label: "Top Bar",
+                      desc: "News-style banner",
+                    },
+                    {
+                      value: "karaoke",
+                      label: "Karaoke",
+                      desc: "Word-by-word highlighting",
+                    },
                   ].map((style) => (
                     <label
                       key={style.value}
                       className={`flex items-center p-4 rounded-xl cursor-pointer transition-colors ${
                         captionStyle === style.value
-                          ? "bg-blue-600 border-2 border-blue-400"
-                          : "bg-gray-700 border-2 border-transparent hover:bg-gray-600"
+                          ? "bg-white text-black"
+                          : "bg-[#1f1f1f] border-2 border-transparent"
                       }`}
                     >
                       <input
@@ -287,12 +297,16 @@ export default function CaptioningPage() {
                         name="captionStyle"
                         value={style.value}
                         checked={captionStyle === style.value}
-                        onChange={(e) => setCaptionStyle(e.target.value as CaptionStyleType)}
+                        onChange={(e) =>
+                          setCaptionStyle(e.target.value as CaptionStyleType)
+                        }
                         className="mr-3"
                       />
                       <div>
                         <div className="font-semibold">{style.label}</div>
-                        <div className="text-sm text-gray-300">{style.desc}</div>
+                        <div className="text-sm text-[#666666]">
+                          {style.desc}
+                        </div>
                       </div>
                     </label>
                   ))}
@@ -300,13 +314,16 @@ export default function CaptioningPage() {
               </div>
             )}
 
-            {/* Captions Info */}
+            {/* captions info */}
             {captions.length > 0 && (
-              <div className="bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-700">
-                <h3 className="text-lg font-semibold mb-3">📝 Caption Segments</h3>
+              <div className="bg-[#171717] rounded-2xl p-6 shadow-xl border border-[#1f1f1f]">
+                <h3 className="text-lg font-semibold mb-3">Caption Segments</h3>
                 <div className="max-h-64 overflow-y-auto space-y-2">
                   {captions.map((caption, idx) => (
-                    <div key={idx} className="bg-gray-700 p-3 rounded-lg text-sm">
+                    <div
+                      key={idx}
+                      className="bg-[#1f1f1f] p-3 rounded-lg text-sm"
+                    >
                       <div className="text-gray-400 text-xs mb-1">
                         {caption.start.toFixed(2)}s - {caption.end.toFixed(2)}s
                       </div>
@@ -318,14 +335,14 @@ export default function CaptioningPage() {
             )}
           </div>
 
-          {/* Right Column - Preview */}
+          {/* right column - preview */}
           <div className="space-y-6">
             {videoUrl && captions.length > 0 ? (
-              <div className="bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-700">
+              <div className="bg-[#171717] rounded-2xl p-6 shadow-xl border border-[#1f1f1f]">
                 <h2 className="text-2xl font-semibold mb-4 flex items-center">
-                  <span className="mr-2">👁️</span> Preview with Captions
+                  Preview with Captions
                 </h2>
-                
+
                 <div className="rounded-xl overflow-hidden shadow-2xl">
                   <Player
                     component={VideoWithCaptions}
@@ -340,14 +357,15 @@ export default function CaptioningPage() {
                   />
                 </div>
 
-                <div className="mt-4 p-4 bg-gray-700 rounded-xl">
+                <div className="mt-4 p-4 bg-[#1f1f1f] rounded-xl">
                   <p className="text-sm text-gray-300">
-                    ℹ️ Preview updates in real-time. Change caption style to see different layouts.
+                    Preview updates in real-time. Change caption style to see
+                    different layouts.
                   </p>
                 </div>
               </div>
             ) : videoUrl ? (
-              <div className="bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-700">
+              <div className="bg-[#171717] rounded-2xl p-6 shadow-xl border border-[#1f1f1f]">
                 <h2 className="text-2xl font-semibold mb-4">Video Preview</h2>
                 <video
                   ref={videoRef}
@@ -358,7 +376,7 @@ export default function CaptioningPage() {
                 />
               </div>
             ) : (
-              <div className="bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-700 h-96 flex items-center justify-center">
+              <div className="bg-[#171717] rounded-2xl p-6 shadow-xl border border-[#1f1f1f] h-96 flex items-center justify-center">
                 <div className="text-center text-gray-500">
                   <div className="text-6xl mb-4">🎥</div>
                   <p className="text-lg">Upload a video to get started</p>
@@ -366,16 +384,16 @@ export default function CaptioningPage() {
               </div>
             )}
 
-            {/* Export Section */}
+            {/* export section */}
             {captions.length > 0 && (
-              <div className="bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-700">
+              <div className="bg-[#171717] rounded-2xl p-6 shadow-xl border border-[#1f1f1f]">
                 <h2 className="text-2xl font-semibold mb-4 flex items-center">
-                  <span className="mr-2">📥</span> Export Options
+                  Export Options
                 </h2>
-                
+
                 <div className="space-y-3">
-                  <div className="p-4 bg-gray-700 rounded-xl">
-                    <h3 className="font-semibold mb-2">🖥️ Local Render (CLI)</h3>
+                  <div className="p-4 bg-[#1f1f1f] rounded-xl">
+                    <h3 className="font-semibold mb-2">Local Render (CLI)</h3>
                     <p className="text-sm text-gray-300 mb-2">
                       To render locally, use the Remotion CLI:
                     </p>
@@ -383,40 +401,12 @@ export default function CaptioningPage() {
                       npx remotion render {VIDEO_CAPTION_COMP_NAME}
                     </code>
                   </div>
-
-                  <div className="p-4 bg-gray-700 rounded-xl">
-                    <h3 className="font-semibold mb-2">☁️ Cloud Render (AWS Lambda)</h3>
-                    <p className="text-sm text-gray-300">
-                      Configure AWS Lambda in <code>.env</code> for cloud rendering.
-                      See README for setup instructions.
-                    </p>
-                  </div>
                 </div>
               </div>
             )}
           </div>
         </div>
-
-        {/* Status Messages */}
-        {error && (
-          <div className="fixed bottom-4 right-4 bg-red-600 text-white px-6 py-4 rounded-xl shadow-lg max-w-md">
-            <div className="flex items-center">
-              <span className="mr-2">❌</span>
-              <span>{error}</span>
-            </div>
-          </div>
-        )}
-
-        {successMessage && (
-          <div className="fixed bottom-4 right-4 bg-green-600 text-white px-6 py-4 rounded-xl shadow-lg max-w-md">
-            <div className="flex items-center">
-              <span className="mr-2">✅</span>
-              <span>{successMessage}</span>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
 }
-
